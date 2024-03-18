@@ -1,0 +1,38 @@
+.success-main {
+    background-color: #37C77F;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+.content {
+    width: 400px;
+    margin-right: 60px;
+}
+
+.content h1 {
+    font-weight: 800;
+    font-size: 80px;
+    text-align: center;
+}
+.content h2 {
+    font-weight: 700;
+    font-size: 24px;
+    text-align: center;
+}
+.content button {
+    width: 243px;
+    height: 64px;
+    margin-top:60px;
+    margin-left: 60px;
+    border-radius: 24px;
+    background-color: #31B272;
+    color: white;
+    outline-style: none;
+    border: none;
+}
+.content button:hover {
+    background-color: #3BD689;
+}

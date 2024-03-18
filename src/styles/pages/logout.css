@@ -1,0 +1,26 @@
+.logout {
+    position: absolute;
+    right: 40px;
+    top: 40px;
+
+    z-index: 10;
+
+    cursor: pointer;
+
+    width: 64px;
+    height: 64px;
+    background: #ABA255;
+    border-radius: 26px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    border: none;
+
+    color: #fff;
+
+    padding: 20px;
+
+    transition: background-color 0.2s;
+}
