@@ -1,23 +1,27 @@
 import React from 'react';
-import { useAuth } from '../services/AuthServices';
 import { FiLogOut } from 'react-icons/fi';
-
 import '../styles/pages/logout.css';
-import { Link, useHistory } from 'react-router-dom';
-import { Popup } from 'react-leaflet';
+import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../config/firebaseConfig';
 
 const LogoutButton: React.FC = () => {
-    const history = useHistory();
-    const auth = useAuth();
+  const navigate = useNavigate();
 
-    return <button className='logout' onClick={() =>  {
-        auth.logout() 
-        history.push('/successLogout');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // ⬅️ Encerra a sessão do Firebase
+      navigate('/successLogout');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
 
-
-        }}>
-        <FiLogOut></FiLogOut>
-        </button>;
+  return (
+    <button className="logout" onClick={handleLogout} title="Sair">
+      <FiLogOut size={24} color="#FFF" />
+    </button>
+  );
 };
 
 export default LogoutButton;

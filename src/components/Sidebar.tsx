@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
-import { useHistory, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import mapMarkerImg from '../images/Local.svg';
 
 import '../styles/components/sidebar.css';
@@ -9,7 +9,7 @@ import '../styles/components/sidebar.css';
 
 
 export default function Sidebar() {
-    const { goBack } = useHistory();
+    const navigate = useNavigate();
 
 
     
@@ -19,7 +19,7 @@ export default function Sidebar() {
 
         <footer>
         
-          <button type="button" onClick={goBack}>
+          <button type="button" onClick={() => navigate(-1)}>
             <FiArrowLeft size={24} color="#FFF" />
           </button>
 

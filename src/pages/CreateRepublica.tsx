@@ -1,30 +1,37 @@
 import React, { useState, FormEvent, ChangeEvent } from "react";
-import { Map, Marker, TileLayer } from 'react-leaflet';
+
+import { collection, addDoc } from "firebase/firestore"
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../config/firebaseConfig";
+
+
+import { db } from "../config/firebaseConfig"
+
+
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { LeafletMouseEvent } from 'leaflet';
 
 import '../styles/pages/create-republica.css';
 import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
+
 import mapIcon from "../utils/mapIcon";
-import { useHistory } from "react-router-dom";
-import api from "../services/api";
-
 import { FiPlus } from "react-icons/fi";
-
-
-
 
 export default function CreateRepublica() {
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [position, setPosition] = useState({ latitude: 0, longitude: 0 });
   const [name, setName] = useState("");
   const [about, setAbout] = useState("");
   const [address, setAddress] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [previousImages, setPreviousImages] = useState<string[]>([]); 
+  const [previousImages, setPreviousImages] = useState<string[]>([]);
   const [open_on_weekends, setOpenOnWeekends] = useState(true);
   const [images, setImages] = useState<File[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
+
 
   function handleMapClick(event: LeafletMouseEvent) {
     const { lat, lng } = event.latlng;
@@ -35,40 +42,59 @@ export default function CreateRepublica() {
     });
 
   }
-  function handleSelectImages(event: ChangeEvent<HTMLInputElement>) {
-    if (!event.target.files) {
-      return;
-    }
-
-    const SelectedImages = Array.from(event.target.files);
-
-    setImages(SelectedImages);
-
-    const SelectedImagesPreview = SelectedImages.map(image => {
-      return URL.createObjectURL(image);
+  function MapClickHandler({ onClick }: { onClick: (event: LeafletMouseEvent) => void }) {
+    useMapEvents({
+      click: onClick,
     });
 
-    setPreviousImages(SelectedImagesPreview)
+    return null;
   }
+  function handleSelectImages(event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.files) return;
+
+    const selected = Array.from(event.target.files);
+    setImages(selected);
+
+    const preview = selected.map((file) => URL.createObjectURL(file));
+    setPreviousImages(preview);
+  }
+
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const { latitude, longitude } = position;
 
-    const data = new FormData();
-    data.append('name', name);
-    data.append('about', about);
-    data.append('latitude', String(latitude));
-    data.append('longitude', String(longitude));
-    data.append('address', address);
-    data.append('whatsapp', String(whatsapp));
-    data.append('open_on_weekends', String(open_on_weekends));
-    images.forEach(image => {
-      data.append('images', image);
-    })
-    await api.post('/republicas', data)
-    history.push('/success')
+    try {
+      const imageUrls: string[] = [];
+
+      for (const image of images) {
+        const imageRef = ref(storage, `republicas/${Date.now()}-${image.name}`);
+        await uploadBytes(imageRef, image);
+        const url = await getDownloadURL(imageRef); 
+        imageUrls.push(url);
+      }
+
+      const RepublicasData = {
+        name,
+        name_lower: name.toLowerCase(),
+        about,
+        latitude,
+        longitude,
+        address,
+        whatsapp,
+        open_on_weekends,
+        images: imageUrls
+      }
+      const docRef = await addDoc(collection(db, "Republicas"), RepublicasData)
+      setMessage(`Profissional adicionado com sucesso! ID: ${docRef.id}`);
+      navigate('/success')
+
+    } catch (error) {
+      console.error("Erro ao adicionar profissional:", error);
+      setMessage("Erro ao adicionar profissional.");
+    }
   }
+
 
 
   return (
@@ -80,12 +106,12 @@ export default function CreateRepublica() {
           <fieldset>
             <legend>Dados</legend>
 
-            <Map
+            <MapContainer
               center={[-19.8146624, -43.1849385]}
               style={{ width: '100%', height: 280 }}
               zoom={15}
-              onclick={handleMapClick}
             >
+              <MapClickHandler onClick={handleMapClick} />
               <TileLayer
                 url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
@@ -96,7 +122,7 @@ export default function CreateRepublica() {
                   icon={mapIcon}
                   position={[position.latitude, position.longitude]} />
               )}
-            </Map>
+            </MapContainer >
 
             <div className="input-block">
               <label htmlFor="name">Nome</label>
@@ -113,8 +139,8 @@ export default function CreateRepublica() {
                 maxLength={700}
                 value={about}
                 onChange={event => setAbout(event.target.value)}
-                wrap="off" 
-                 />
+                wrap="off"
+              />
             </div>
 
             <div className="input-block">
@@ -186,4 +212,3 @@ export default function CreateRepublica() {
   );
 }
 
-// return `https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`;

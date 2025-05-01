@@ -1,85 +1,125 @@
 import React, { useEffect, useState } from "react";
+import { deleteDoc, doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../config/firebaseConfig";
 import { FaWhatsapp } from "react-icons/fa";
-import { FiArrowRight, FiInfo } from "react-icons/fi";
-import { Map, Marker, TileLayer } from "react-leaflet";
-
+import { FiInfo } from "react-icons/fi";
+import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import '../styles/pages/republica.css';
 import Sidebar from "../components/Sidebar";
 import mapIcon from "../utils/mapIcon";
-
-
-import { Link, useHistory, useParams } from "react-router-dom";
-
-import api from "../services/api";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 interface Republica {
-  id:number
+  id: string;
   latitude: number;
   longitude: number;
   name: string;
   about: string;
   address: string;
-  whatsapp: number
-  open_on_weekends: string;
-  images: Array<{
-    id: number;
-    url: string;
-  }>;
-}
-
-interface RepublicaParams {
-  id: string;
+  whatsapp: string;
+  open_on_weekends: boolean;
+  role: string;
+  images?: string[];
 }
 
 export default function Republicas() {
-  const params = useParams<RepublicaParams>();
-  const [republica, setRepublica] = useState<Republica>();
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const params = useParams();
+  const navigate = useNavigate();
+  const [republica, setRepublica] = useState<Republica | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user] = useAuthState(auth);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  const history = useHistory();
+
 
   useEffect(() => {
-    api.get(`republicas/${params.id}`).then(res => {
-      setRepublica(res.data);
-    });
+    const fetchRepublica = async () => {
+      if (!params.id) return;
+
+      try {
+        const docRef = doc(db, "Republicas", params.id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setRepublica({
+            id: docSnap.id,
+            name: data.name || "",
+            about: data.about || "",
+            address: data.address || "",
+            latitude: data.latitude || 0,
+            longitude: data.longitude || 0,
+            open_on_weekends: !!data.open_on_weekends,
+            whatsapp: data.whatsapp?.toString() || "",
+            role: data.role,
+            images: data.images || []
+          });
+        } else {
+          console.error("República não encontrada");
+        }
+      } catch (err) {
+        console.error("Erro ao buscar república:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRepublica();
   }, [params.id]);
 
-  if (!republica) {
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        const userRef = doc(db, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setUserRole(data.role || null);
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, [user]);
+
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "Republicas", id));
+      console.log("República excluída com sucesso");
+      navigate("/");
+    } catch (error) {
+      console.error("Erro ao excluir a república:", error);
+    }
+    navigate('/exclude');
+  };
+
+  if (loading) {
     return <p>Carregando...</p>;
   }
-  function handleDelete(){
-    api.post(`republicasExclude/${params.id}`);
-    history.push('/exclude');
- }
 
+  if (!republica) {
+    return <p>República não encontrada.</p>;
+  }
 
   return (
     <div className="republica-details-content">
       <div id="page-republica">
         <Sidebar />
         <main>
-        <div className="republica-details">
-          <img src={republica.images[activeImageIndex].url} alt={republica.name} />
+          <div className="republica-details">
 
-          <div className="images">
-            {republica.images.map((image, index) => {
-              return (
-                <button 
-                key={image.id} 
-                className={activeImageIndex === index ? 'active' : ''}
-                type="button"
-                onClick={() => {
-                  setActiveImageIndex(index);
-                }}
-                >
-                  <img src={image.url} alt={republica.name} />
-                </button>
-              );
-            })}
-  
-          </div>
-          
+
             <div className="republica-details-content">
+              {republica.images && republica.images.length > 0 && (
+                <div className="images">
+                  {republica.images.map((url, index) => (
+                    <img key={index} src={url} alt={`Imagem ${index + 1}`} className="republica-image" />
+                  ))}
+                </div>
+              )}
+
               <h1>{republica.name}</h1>
               <p>{republica.about}</p>
 
@@ -89,7 +129,7 @@ export default function Republicas() {
               <p>{republica.address}</p>
 
               <div className="map-container">
-                <Map
+                <MapContainer
                   center={[republica.latitude, republica.longitude]}
                   zoom={16}
                   style={{ width: '100%', height: 280 }}
@@ -102,15 +142,18 @@ export default function Republicas() {
                   <TileLayer
                     url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-            
-                  <Marker interactive={false} icon={mapIcon} position={[republica.latitude, republica.longitude]} />
-                </Map>
+                  <Marker
+                    interactive={false}
+                    icon={mapIcon}
+                    position={[republica.latitude, republica.longitude]}
+                  />
+                </MapContainer >
                 <footer>
-                  <a target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${republica.latitude}, ${republica.longitude}`}>Ver rotas no Google Maps</a>
+                  <a target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${republica.latitude},${republica.longitude}`}>
+                    Ver rotas no Google Maps
+                  </a>
                 </footer>
-
               </div>
-
 
               <div className="open-details">
                 {republica.open_on_weekends ? (
@@ -132,25 +175,27 @@ export default function Republicas() {
                   Entrar em contato
                 </button>
               </a>
-              <div className="edit-block">
-              <div className="edit-republica">
-                <Link to={`/republicasEdit/${republica.id}`}>
-                  <span>EDITAR</span>
-                </Link>
+              {userRole === "admin" ? (
+                <div className="edit-block">
+                  <div className="edit-republica">
+                    <Link to={`/republicasEdit/${republica.id}`}>
+                      <span>EDITAR</span>
+                    </Link>
+                  </div>
+                  <div className="exclude-republica">
+                    <button onClick={() => handleDelete(republica.id)} className="button-exclude">
+                      <span>EXCLUIR</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="exclude-republica">
-                <button onClick={handleDelete} className="button-exclude">
-                  <span>EXCLUIR</span>
-                </button>
-                </div>
-             
-                
-                </div>
-              
+              ) : (null)
+              }
+
+
             </div>
           </div>
         </main>
       </div>
     </div>
-  )
+  );
 }

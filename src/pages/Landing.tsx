@@ -12,7 +12,6 @@ function Landing() {
     return(
         <div id="page-landing">
             <div className="content-wrapper">
-                <img src="" alt="Finder"/>
 
             <main>
                 <h1>Encontre uma república.</h1>

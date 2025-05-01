@@ -2,42 +2,40 @@
   "name": "rep-device",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@firebase/firestore-types": "^2.5.1",
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.5.0",
-    "@testing-library/user-event": "^7.2.1",
-    "@types/jest": "^24.9.1",
-    "@types/node": "^12.12.67",
-    "@types/react": "^16.9.52",
-    "@types/react-dom": "^16.9.8",
-    "@types/react-leaflet": "^2.5.2",
-    "axios": "^0.20.0",
-    "firebase": "^9.18.0",
-    "i": "^0.3.7",
-    "jquery": "^3.6.4",
-    "leaflet": "^1.7.1",
-    "npm": "^9.6.2",
-    "pkg": "^5.8.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-google-login": "^5.2.2",
-    "react-icons": "^3.11.0",
-    "react-id-generator": "^3.0.2",
-    "react-leaflet": "^2.7.0",
-    "react-router-dom": "^5.2.0",
-    "react-scripts": "^5.0.1",
-    "typescript": "^3.7.5",
-    "uuidv4": "^6.2.13"
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "dependencies": {
+    "@react-oauth/google": "^0.8.0",
+    "axios": "^1.6.8",
+    "firebase": "^9.23.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-firebase-hooks": "^5.1.1",
+    "react-icons": "^4.12.0",
+    "react-id-generator": "^3.0.2",
+    "react-leaflet": "^4.2.1",
+    "react-router-dom": "^7.5.3",
+    "react-scripts": "^5.0.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.4",
+    "@types/leaflet": "^1.9.4",
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.41",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "4.9.5"
+  },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
   "browserslist": {
     "production": [
@@ -50,12 +48,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "@types/react-router-dom": "^5.1.6"
-  },
-  "description": "",
-  "main": "index.js",
-  "author": "",
-  "license": "ISC"
+  }
 }

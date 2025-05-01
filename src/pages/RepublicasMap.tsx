@@ -1,140 +1,153 @@
 import React, { useEffect, useState } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "../config/firebaseConfig";
 import { Link } from 'react-router-dom';
 import { FiPlus, FiArrowRight, FiUser, FiLogOut } from 'react-icons/fi';
-import { Map, TileLayer, Marker, Popup } from 'react-leaflet';
-
-
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
-
-
 import '../styles/pages/republicas-map.css';
 import mapIcon from '../utils/mapIcon';
-
-import api from '../services/api';
 import LogoutButton from './Logout';
-import Login from './Login';
 
 interface Republica {
-    id: number;
-    latitude: number;
-    longitude: number;
-    name: string;
+  id: string;
+  latitude: number;
+  longitude: number;
+  name: string;
+  about: string;
+  address: string;
+  open_on_weekends: boolean;
+  whatsapp: number;
 }
-interface SearchResponse {
-    id: number;
-    name: string;
-    latitude: number;
-    longitude: number;
-    image: string;
-    description: string;
-    address: string;
-    whatsapp: string;
-}
-
-
-
 
 function RepublicasMap() {
+  const [republicas, setRepublicas] = useState<Republica[]>([]);
+  const [search, setSearch] = useState('');
+  const [user, loading] = useAuthState(auth);
 
-    const [republicas, setRepublicas] = useState<Republica[]>([]);
-    const [search, setSearch] = useState('');
-    const [results, setResults] = useState<SearchResponse[]>([]);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+  useEffect(() => {
+    const fetchRepublicas = async () => {
+      try {
+        const republicasRef = collection(db, "Republicas");
+        const q = query(republicasRef);
+        const querySnapshot = await getDocs(q);
 
-    useEffect(() => {
-        api.get('republicas').then(res => {
-            setRepublicas(res.data);
+        const data = querySnapshot.docs.map((docSnap) => {
+          const republicaData = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: republicaData.name || "",
+            about: republicaData.about || "",
+            address: republicaData.address || "",
+            latitude: republicaData.latitude || 0,
+            longitude: republicaData.longitude || 0,
+            open_on_weekends: republicaData.open_on_weekends || true,
+            whatsapp: republicaData.whatsapp || 0
+          };
         });
-    }, []);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        setIsAuthenticated(!!token);
-    }, []);
-    const handleSearch = async () => {
-
-        const response = await axios.get<SearchResponse[]>(`http://localhost:3333/find?search=${search}`);
-
-        setResults(response.data);
-        console.log(response.data);
+        setRepublicas(data);
+      } catch (err) {
+        console.error("Erro ao buscar repúblicas:", err);
+      }
     };
 
+    if (!loading) {
+      fetchRepublicas();
+    }
+  }, [loading]);
 
+  const handleSearch = async () => {
+    try {
+      if (!search.trim()) return;
 
+      const q = query(collection(db, "Republicas"), where("name_lower", "==", search.toLowerCase()));
+      const querySnapshot = await getDocs(q);
 
+      const data = querySnapshot.docs.map((docSnap) => {
+        const republicaData = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: republicaData.name || "",
+          about: republicaData.about || "",
+          address: republicaData.address || "",
+          latitude: republicaData.latitude || 0,
+          longitude: republicaData.longitude || 0,
+          open_on_weekends: republicaData.open_on_weekends || true,
+          whatsapp: republicaData.whatsapp || 0
+        };
+      });
 
+      setRepublicas(data);
+    } catch (err) {
+      console.error("Erro ao buscar república:", err);
+    }
+  };
 
-    const dataToDisplay = search.length > 0 ? results : republicas;
-    return (
-        <div id="page-map">
-            <aside>
-                <header>
+  return (
+    <div id="page-map">
+      <aside>
+        <header>
+          <h2>Escolha uma república no mapa</h2>
+          <p>Venha viver os melhores anos da sua vida</p>
+        </header>
+        <footer>
+          <strong>João Monlevade</strong>
+          <span>Minas Gerais</span>
+        </footer>
+      </aside>
 
-                    <h2>Escolha uma república no mapa</h2>
-                    <p>Venha viver os melhores anos da sua vida</p>
-                </header>
+      <MapContainer
+        center={[-19.8146624, -43.1849385]}
+        zoom={15}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <TileLayer url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {republicas.map((republica) => (
+          <Marker
+            key={republica.id}
+            icon={mapIcon}
+            position={[republica.latitude, republica.longitude]}
+          >
+            <Popup closeButton={false} minWidth={240} maxWidth={240} className="map-popup">
+              {republica.name}
+              <Link to={`/republicas/${republica.id}`}>
+                <FiArrowRight size={20} color="black" />
+              </Link>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
 
-                <footer>
-                    <strong>João Monlevade</strong>
-                    <span>Minas Gerais</span>
-                </footer>
-            </aside>
+      <div id="search">
+        <input
+          type="text"
+          placeholder="nome da república"
+          id="searchInput"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button type="button" id="searchButton" onClick={handleSearch}>
+          Buscar
+        </button>
+      </div>
 
-            <Map
-                center={[-19.8146624, -43.1849385]}
-                zoom={15}
-                style={{ width: '100%', height: '100%' }}
-            >
-                <TileLayer url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <Link to="/republicas/create" className="create-republica">
+        <FiPlus size={32} color="#FFF" />
+      </Link>
 
-                {dataToDisplay.map(republica => {
-                    return (
-                        <Marker
-                            key={republica.id}
-                            icon={mapIcon}
-                            position={[republica.latitude, republica.longitude]}
-                        >
-                            <Popup closeButton={false} minWidth={240} maxWidth={240} className="map-popup">
-                                {republica.name}
-                                <Link to={`/republicas/${republica.id}`}>
-
-
-                                    <FiArrowRight size={20} color="black" />
-                                </Link>
-
-                            </Popup>
-
-                        </Marker>
-
-                    )
-
-                })}
-            </Map>
-
-            <div>
-
-            </div>
-            {!isAuthenticated && <Link to="login" className="login">
-                <FiUser size={32} color='#FFF' />
-            </Link>}
-
-            <div id='search'>
-                <input type="text" placeholder=' nome da república' id='searchInput' value={search} onChange={(e) => setSearch(e.target.value)} />
-                <button type="button" id='searchButton' onClick={handleSearch}>Buscar</button>
-            </div>
-
-
-            <Link to="/republicas/create" className="create-republica">
-                <FiPlus size={32} color='#FFF' />
-            </Link>
-            {isAuthenticated && <LogoutButton />}
-
+      {!user ? (
+        <Link to="/login" className="login">
+          <FiUser size={32} color="#FFF" />
+        </Link>
+      ) : (
+        <div className="logout-icon">
+          <LogoutButton />
         </div>
-    );
-
-
+      )}
+    </div>
+  );
 }
-
 
 export default RepublicasMap;
