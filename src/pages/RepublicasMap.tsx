@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../config/firebaseConfig";
 import { Link } from 'react-router-dom';
-import { FiPlus, FiArrowRight, FiUser, FiLogOut } from 'react-icons/fi';
+import { FiPlus, FiArrowRight, FiUser } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/pages/republicas-map.css';
@@ -19,10 +19,12 @@ interface Republica {
   address: string;
   open_on_weekends: boolean;
   whatsapp: number;
+  views?: number;
 }
 
 function RepublicasMap() {
   const [republicas, setRepublicas] = useState<Republica[]>([]);
+  const [recomendadas, setRecomendadas] = useState<Republica[]>([]);
   const [search, setSearch] = useState('');
   const [user, loading] = useAuthState(auth);
 
@@ -43,7 +45,8 @@ function RepublicasMap() {
             latitude: republicaData.latitude || 0,
             longitude: republicaData.longitude || 0,
             open_on_weekends: republicaData.open_on_weekends || true,
-            whatsapp: republicaData.whatsapp || 0
+            whatsapp: republicaData.whatsapp || 0,
+            views: republicaData.views || 0
           };
         });
 
@@ -57,6 +60,37 @@ function RepublicasMap() {
       fetchRepublicas();
     }
   }, [loading]);
+
+  useEffect(() => {
+    const fetchRecomendadas = async () => {
+      try {
+        const republicasRef = collection(db, "Republicas");
+        const q = query(republicasRef, orderBy("views", "desc"), limit(5));
+        const querySnapshot = await getDocs(q);
+
+        const data = querySnapshot.docs.map((docSnap) => {
+          const republicaData = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: republicaData.name || "",
+            about: republicaData.about || "",
+            address: republicaData.address || "",
+            latitude: republicaData.latitude || 0,
+            longitude: republicaData.longitude || 0,
+            open_on_weekends: republicaData.open_on_weekends || true,
+            whatsapp: republicaData.whatsapp || 0,
+            views: republicaData.views || 0
+          };
+        });
+
+        setRecomendadas(data);
+      } catch (err) {
+        console.error("Erro ao buscar recomendadas:", err);
+      }
+    };
+
+    fetchRecomendadas();
+  }, []);
 
   const handleSearch = async () => {
     try {
@@ -75,7 +109,8 @@ function RepublicasMap() {
           latitude: republicaData.latitude || 0,
           longitude: republicaData.longitude || 0,
           open_on_weekends: republicaData.open_on_weekends || true,
-          whatsapp: republicaData.whatsapp || 0
+          whatsapp: republicaData.whatsapp || 0,
+          views: republicaData.views || 0
         };
       });
 
@@ -86,12 +121,41 @@ function RepublicasMap() {
   };
 
   return (
-    <div id="page-map">
+    <div id="page-map" className='relative'>
       <aside>
         <header>
+          <div id="search">
+            <input
+              type="text"
+              placeholder="nome da república"
+              id="searchInput"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button type="button" id="searchButton" onClick={handleSearch}>
+              Buscar
+            </button>
+          </div>
           <h2>Escolha uma república no mapa</h2>
           <p>Venha viver os melhores anos da sua vida</p>
         </header>
+        <div className="recomendadas-container">
+          <h3 className="recomendadas-title">Mais visitadas</h3>
+          {recomendadas.length === 0 ? (
+            <p className="text-sm text-gray-300 italic">Nenhuma recomendação disponível.</p>
+          ) : (
+            <ul className="recomendadas-list">
+              {recomendadas.map(rep => (
+                <li key={rep.id} className="recomendadas-item">
+                  <Link to={`/republicas/${rep.id}`} className="recomendadas-link">
+                    <span className="truncate">{rep.name}</span>
+                    <span className="recomendadas-views">{rep.views} visitas</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <footer>
           <strong>João Monlevade</strong>
           <span>Minas Gerais</span>
@@ -118,20 +182,9 @@ function RepublicasMap() {
             </Popup>
           </Marker>
         ))}
+
       </MapContainer>
 
-      <div id="search">
-        <input
-          type="text"
-          placeholder="nome da república"
-          id="searchInput"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button type="button" id="searchButton" onClick={handleSearch}>
-          Buscar
-        </button>
-      </div>
 
       <Link to="/republicas/create" className="create-republica">
         <FiPlus size={32} color="#FFF" />

@@ -1,8 +1,6 @@
 import React from 'react';
 
 import { Routes, Route } from 'react-router-dom';
-
-import Landing from './pages/Landing';
 import RepublicasMap from './pages/RepublicasMap';
 import Republica from './pages/Republica';
 import CreateRepublica from './pages/CreateRepublica';
@@ -19,7 +17,6 @@ import ProtectedRoute from "./services/protectedRoutes";
 const Routers: React.FC = () => {
     return (
         <Routes>
-            <Route path="/" element={<Landing />} />
             <Route path="/app" element={<RepublicasMap />} />
             <Route path="/republicas/create" element={<CreateRepublica />} />
             <Route path="/users/create" element={<CreateUser />} />

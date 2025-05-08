@@ -29,7 +29,7 @@ export default function Login() {
         if (role === "admin") {
           navigate("/app");
         } else if (role === "user") {
-          navigate("/");
+          navigate("/app");
         } else {
           setError("Papel do usuário não reconhecido.");
         }

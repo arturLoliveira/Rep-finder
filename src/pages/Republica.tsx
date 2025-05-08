@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, increment, updateDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiInfo } from "react-icons/fi";
@@ -21,6 +21,7 @@ interface Republica {
   open_on_weekends: boolean;
   role: string;
   images?: string[];
+  views?: number;
 }
 
 export default function Republicas() {
@@ -30,8 +31,6 @@ export default function Republicas() {
   const [loading, setLoading] = useState(true);
   const [user] = useAuthState(auth);
   const [userRole, setUserRole] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     const fetchRepublica = async () => {
@@ -52,8 +51,13 @@ export default function Republicas() {
             longitude: data.longitude || 0,
             open_on_weekends: !!data.open_on_weekends,
             whatsapp: data.whatsapp?.toString() || "",
-            role: data.role,
-            images: data.images || []
+            role: data.role || "",
+            images: data.images || [],
+            views: data.views || 0
+          });
+
+          await updateDoc(docRef, {
+            views: increment(1)
           });
         } else {
           console.error("República não encontrada");
@@ -83,25 +87,19 @@ export default function Republicas() {
     fetchUserRole();
   }, [user]);
 
-
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, "Republicas", id));
       console.log("República excluída com sucesso");
-      navigate("/");
+      navigate("/exclude");
     } catch (error) {
       console.error("Erro ao excluir a república:", error);
     }
-    navigate('/exclude');
   };
 
-  if (loading) {
-    return <p>Carregando...</p>;
-  }
+  if (loading) return <p>Carregando...</p>;
 
-  if (!republica) {
-    return <p>República não encontrada.</p>;
-  }
+  if (!republica) return <p>República não encontrada.</p>;
 
   return (
     <div className="republica-details-content">
@@ -109,20 +107,28 @@ export default function Republicas() {
         <Sidebar />
         <main>
           <div className="republica-details">
-
-
             <div className="republica-details-content">
-              {republica.images && republica.images.length > 0 && (
+
+              {republica.images && republica.images.length > 0 ? (
                 <div className="images">
                   {republica.images.map((url, index) => (
-                    <img key={index} src={url} alt={`Imagem ${index + 1}`} className="republica-image" />
+                    <img
+                      key={index}
+                      src={url}
+                      alt={`Imagem da república ${republica.name} - ${index + 1}`}
+                      className="republica-image"
+                      loading="lazy"
+                      onError={(e) => (e.currentTarget.src = "/placeholder.jpg")}
+                    />
                   ))}
                 </div>
+              ) : (
+                <p className="no-images">Nenhuma imagem disponível.</p>
               )}
 
               <h1>{republica.name}</h1>
               <p>{republica.about}</p>
-
+              <p>Visualizações: {republica.views}</p>
               <hr />
 
               <h2>Instruções para visita</h2>
@@ -139,15 +145,9 @@ export default function Republicas() {
                   scrollWheelZoom={false}
                   doubleClickZoom={false}
                 >
-                  <TileLayer
-                    url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker
-                    interactive={false}
-                    icon={mapIcon}
-                    position={[republica.latitude, republica.longitude]}
-                  />
-                </MapContainer >
+                  <TileLayer url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker interactive={false} icon={mapIcon} position={[republica.latitude, republica.longitude]} />
+                </MapContainer>
                 <footer>
                   <a target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${republica.latitude},${republica.longitude}`}>
                     Ver rotas no Google Maps
@@ -175,7 +175,8 @@ export default function Republicas() {
                   Entrar em contato
                 </button>
               </a>
-              {userRole === "admin" ? (
+
+              {userRole === "admin" && (
                 <div className="edit-block">
                   <div className="edit-republica">
                     <Link to={`/republicasEdit/${republica.id}`}>
@@ -187,10 +188,9 @@ export default function Republicas() {
                       <span>EXCLUIR</span>
                     </button>
                   </div>
+                  <p>Visualizações: {republica.views}</p>
                 </div>
-              ) : (null)
-              }
-
+              )}
 
             </div>
           </div>
