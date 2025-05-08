@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBD4U1Su7NAt_hKTTNSHn4T1xN5L2uDJSk",
+  apiKey: "",
   authDomain: "finder-798c6.firebaseapp.com",
   projectId: "finder-798c6",
   storageBucket: "finder-798c6.firebasestorage.app",
